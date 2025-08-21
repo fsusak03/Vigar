@@ -5,6 +5,9 @@ SHELL := powershell.exe
 
 help: 
 	@echo "Targets: dev, prod, stop, logs, rebuild"
+	@echo "  superuser   - Create Django superuser in running container"
+	@echo "  seed        - Seed sample data"
+	@echo "  roles       - Create default roles (admin, manager, member)"
 
 DEV_FILES := -f Docker-compose.yml -f docker-compose.override.yml
 
@@ -28,3 +31,21 @@ logs:
 .PHONY: rebuild
 rebuild:
 	docker compose -f Docker-compose.yml build --no-cache
+
+.PHONY: superuser
+superuser:
+	docker compose -f Docker-compose.yml up -d db web
+	docker compose -f Docker-compose.yml exec web python manage.py createsuperuser
+
+.PHONY: seed
+seed:
+	docker compose -f Docker-compose.yml up -d db web
+	docker compose -f Docker-compose.yml exec web python manage.py seed_data
+
+.PHONY: roles
+roles:
+	docker compose -f Docker-compose.yml up -d db web
+	docker compose -f Docker-compose.yml exec web python manage.py create_roles
+.PHONY: psql
+psql:
+	docker compose exec db psql -U vigar -d vigar
