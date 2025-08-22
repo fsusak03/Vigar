@@ -1,8 +1,8 @@
 from rest_framework import viewsets, decorators, response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from . import selectors as sel, services as svc
-from .permissions import IsAdminOrReadOnly, IsProjectMemberOrReadOnly
+from .permissions import IsProjectMemberOrReadOnly
 from .serializers import (
     ClientSerializer,
     ProjectSerializer,
@@ -16,7 +16,7 @@ from .models import Project
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter # pyright: ignore[reportMissingImports]
 from rest_framework_simplejwt.tokens import RefreshToken
 
 @api_view(["GET"])
