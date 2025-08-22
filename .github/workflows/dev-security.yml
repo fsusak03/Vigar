@@ -1,0 +1,70 @@
+name: Development Security Check
+
+on:
+  # Run on every push to development branches
+  push:
+    branches: [ dev, develop, feature/*, fix/* ]
+  
+  # Run on PRs targeting dev
+  pull_request:
+    branches: [ dev, develop ]
+
+jobs:
+  quick-security-scan:
+    name: Quick Security Scan for Dev
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install semgrep
+        run: pip install semgrep
+
+      - name: Run local security rules
+        run: semgrep --config=.semgrep.yml --json --output=results.json .
+        
+      - name: Display results
+        if: always()
+        run: |
+          echo "=== Security Scan Results ==="
+          if [ -f results.json ]; then
+            python -c "
+          import json
+          with open('results.json') as f:
+              data = json.load(f)
+          if data.get('results'):
+              print(f'⚠️ Found {len(data[\"results\"])} security issues:')
+              for result in data['results']:
+                  print(f'  - {result[\"check_id\"]}: {result[\"message\"]} ({result[\"path\"]}:{result[\"start\"][\"line\"]})')
+              exit(1)
+          else:
+              print('✅ No security issues found!')
+          "
+          else
+            echo "✅ No security issues found!"
+          fi
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('results.json')) {
+              const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
+              if (results.results && results.results.length > 0) {
+                const issues = results.results.map(r => `- **${r.check_id}**: ${r.message} \`${r.path}:${r.start.line}\``).join('\n');
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `## 🔒 Development Security Issues Found\n\n${issues}\n\nPlease address these security concerns before merging.`
+                });
+              }
+            }

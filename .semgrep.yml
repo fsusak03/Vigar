@@ -1,0 +1,75 @@
+# Semgrep configuration for Django/Python security scanning
+rules:
+  # Django specific security rules
+  - id: django-debug-enabled
+    patterns:
+      - pattern: DEBUG = True
+    message: "Django DEBUG should not be enabled in production"
+    severity: WARNING
+    languages: [python]
+    paths:
+      include:
+        - "**/settings.py"
+    
+  - id: django-secret-key-hardcoded
+    patterns:
+      - pattern: SECRET_KEY = "..."
+    message: "Django SECRET_KEY should not be hardcoded"
+    severity: ERROR
+    languages: [python]
+    paths:
+      include:
+        - "**/settings.py"
+        
+  - id: django-allowed-hosts-wildcard
+    pattern-either:
+      - pattern: ALLOWED_HOSTS = ["*"]
+      - pattern: ALLOWED_HOSTS = ['*']
+    message: "Django ALLOWED_HOSTS should not use wildcard in production"
+    severity: WARNING
+    languages: [python]
+    paths:
+      include:
+        - "**/settings.py"
+
+  # Python security patterns
+  - id: hardcoded-password
+    pattern-either:
+      - pattern: password = "..."
+      - pattern: PASSWORD = "..."
+      - pattern: pwd = "..."
+    message: "Potential hardcoded password detected"
+    severity: ERROR
+    languages: [python]
+    
+  # Docker security checks (simplified to avoid parsing errors)
+  - id: docker-add-usage
+    pattern: ADD $...ARGS
+    message: "Consider using COPY instead of ADD for better security"
+    severity: INFO
+    languages: [dockerfile]
+    paths:
+      include:
+        - "Dockerfile*"
+
+# Include additional rulesets
+rules_include:
+  - p/python
+  - p/django 
+  - p/security-audit
+  - p/secrets
+  - p/docker
+
+# Exclude certain paths from scanning
+paths:
+  exclude:
+    - "*.log"
+    - "node_modules/"
+    - ".git/"
+    - "__pycache__/"
+    - "*.pyc"
+    - "venv/"
+    - ".env/"
+    - "migrations/"
+    - "static/"
+    - "media/"
