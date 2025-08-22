@@ -1,8 +1,8 @@
-name: Publish Docker (dev)
+name: Publish Docker (prod)
 
 on:
   workflow_run:
-    workflows: ["CI (dev)"]
+    workflows: ["CI (prod)"]
     types:
       - completed
 
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,12 +44,12 @@ PY
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push image (dev)
+      - name: Build and push image (prod)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/vigar:dev-latest
-            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.event.workflow_run.head_sha }}
-            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ steps.extract_version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/vigar:prod-latest
+            ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ steps.extract_version.outputs.version }}
