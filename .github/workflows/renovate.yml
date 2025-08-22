@@ -17,6 +17,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Scan for critical vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+          format: table
+          hide-progress: true
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@v40.2.7
         with:
