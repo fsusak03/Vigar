@@ -1,18 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "dependencyDashboard": true,
-  "enabledManagers": ["pip_requirements", "dockerfile", "github-actions"],
-  "labels": ["dependencies"],
-  "prHourlyLimit": 0,
-  "rangeStrategy": "auto",
-  "rebaseWhen": "behind-base-branch",
-  "pip_requirements": {
-    "managerFilePatterns": ["(^|/)requirements\\.txt$"]
-  },
-  "packageRules": [
-    { "matchManagers": ["pip_requirements"], "groupName": "python dependencies" },
-    { "matchManagers": ["github-actions"], "groupName": "GitHub Actions" },
-    { "matchManagers": ["dockerfile"], "groupName": "Docker base images" }
-  ]
+  "extends": ["config:recommended"]
 }

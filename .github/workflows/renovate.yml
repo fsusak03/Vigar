@@ -50,7 +50,7 @@ jobs:
         uses: renovatebot/github-action@v43.0.4
 
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RENOVATE_TOKEN1 }}
           configurationFile: renovate-config.js
         env:
           LOG_LEVEL: info
