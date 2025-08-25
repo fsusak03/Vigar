@@ -42,7 +42,14 @@ jobs:
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository_owner }}/vigar:prod-latest
             ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ github.event.workflow_run.head_sha }}
             ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ steps.extract_version.outputs.version }}
+      - name: Smoke test (production)
+        if: ${{ env.PROD_URL != '' }}
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+        run: |
+          curl -fsS "$PROD_URL/api/health/" | jq . || (echo "Smoke test failed" && exit 1)
