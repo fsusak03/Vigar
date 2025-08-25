@@ -27,8 +27,15 @@ jobs:
         id: extract_version
         shell: bash
         run: |
-          VERSION=$(python -c "import io,re; s=io.open('Vigar/settings.py','r',encoding='utf-8').read(); m=re.search(r'VERSION\"\\s*:\\s*\"([^\"]+)\"', s); print(m.group(1) if m else '0.0.0')")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      VERSION=$(python - <<'PY'
+      import io, re
+      with io.open('Vigar/settings.py', 'r', encoding='utf-8') as f:
+        s = f.read()
+      m = re.search(r'VERSION"\s*:\s*"([^"]+)"', s)
+      print(m.group(1) if m else '0.0.0')
+      PY
+      )
+      echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
@@ -48,7 +55,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.event.workflow_run.head_sha }}
             ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ steps.extract_version.outputs.version }}
       - name: Smoke test (staging)
-        if: ${{ env.STAGING_URL != '' }}
+        if: ${{ secrets.STAGING_URL != '' }}
         env:
           STAGING_URL: ${{ secrets.STAGING_URL }}
         run: |
