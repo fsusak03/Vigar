@@ -27,15 +27,8 @@ jobs:
         id: extract_version
         shell: bash
         run: |
-          VERSION=$(python - <<'PY'
-import io, re
-with io.open('Vigar/settings.py', 'r', encoding='utf-8') as f:
-    s = f.read()
-m = re.search(r'VERSION"\s*:\s*"([^"]+)"', s)
-print(m.group(1) if m else "0.0.0")
-PY
-          )
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(python -c "import io,re; s=io.open('Vigar/settings.py','r',encoding='utf-8').read(); m=re.search(r'VERSION\"\\s*:\\s*\"([^\"]+)\"', s); print(m.group(1) if m else '0.0.0')")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
@@ -49,7 +42,14 @@ PY
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository_owner }}/vigar:prod-latest
             ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ github.event.workflow_run.head_sha }}
             ghcr.io/${{ github.repository_owner }}/vigar:prod-${{ steps.extract_version.outputs.version }}
+      - name: Smoke test (production)
+        if: ${{ env.PROD_URL != '' }}
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+        run: |
+          curl -fsS "$PROD_URL/api/health/" | jq . || (echo "Smoke test failed" && exit 1)
