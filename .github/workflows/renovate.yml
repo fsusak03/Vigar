@@ -48,6 +48,7 @@ jobs:
             || github.event_name == 'workflow_dispatch'
           }}
         uses: renovatebot/github-action@v43.0.9
+
         with:
           token: ${{ secrets.RENOVATE_TOKEN1 }}
           configurationFile: renovate-config.js
