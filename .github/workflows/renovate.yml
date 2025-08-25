@@ -47,10 +47,10 @@ jobs:
              github.event.workflow_run.head_branch == 'dev')
             || github.event_name == 'workflow_dispatch'
           }}
-        uses: renovatebot/github-action@v40.2.7
+        uses: renovatebot/github-action@v43.0.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          configurationFile: renovate.json
+          configurationFile: renovate-config.js
         env:
           LOG_LEVEL: info
           RENOVATE_REPOSITORIES: ${{ github.repository }}   # 👈 OVO DODAJ
