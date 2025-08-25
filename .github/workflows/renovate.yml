@@ -18,14 +18,16 @@ jobs:
     steps:
       - name: Checkout (workflow_run)
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+
       - name: Checkout (manual)
-        if: ${{ github.event_name != 'workflow_run' }}
-        uses: actions/checkout@v4
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/checkout@v5
+
       - name: Scan for critical vulnerabilities (Trivy)
-        if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
+        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
@@ -35,10 +37,20 @@ jobs:
           exit-code: '1'
           format: table
           hide-progress: true
+
       - name: Self-hosted Renovate
-        uses: renovatebot/github-action@v40.2.7
+        if: >
+          ${{
+            (github.event_name == 'workflow_run' &&
+             github.event.workflow_run.conclusion == 'success' &&
+             github.event.workflow_run.event == 'push' &&
+             github.event.workflow_run.head_branch == 'dev')
+            || github.event_name == 'workflow_dispatch'
+          }}
+        uses: renovatebot/github-action@v43.0.9
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          configurationFile: renovate.json
+          token: ${{ secrets.RENOVATE_TOKEN }}   # bolje PAT nego GITHUB_TOKEN
+          configurationFile: renovate-config.js
         env:
           LOG_LEVEL: info
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
