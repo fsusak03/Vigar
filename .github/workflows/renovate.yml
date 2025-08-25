@@ -1,9 +1,10 @@
 name: Renovate
 
 on:
-  push:
-    branches:
-      - '**'
+  workflow_run:
+    workflows: ["CI (dev)"]
+    types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,9 +19,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Scan for critical vulnerabilities (Trivy)
+        if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
+            with:
+              ref: ${{ github.event.workflow_run.head_sha }}
           scanners: vuln
           ignore-unfixed: true
           severity: CRITICAL

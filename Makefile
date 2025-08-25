@@ -18,6 +18,8 @@ help:
 	@echo "  psql        - Open psql against the db container"
 	@echo "  lint        - Run ruff lint locally"
 	@echo "  format      - Run ruff --fix locally"
+	@echo "  db-backup   - Backup Postgres to ./backups (use: make db-backup FILE=backup.sql)"
+	@echo "  db-restore  - Restore Postgres from ./backups (use: make db-restore FILE=backup.sql)"
 
 DEV_FILES := -f Docker-compose.yml -f docker-compose.override.yml
 
@@ -71,6 +73,18 @@ roles:
 .PHONY: psql
 psql:
 	docker compose -f Docker-compose.yml exec db psql -U vigar -d vigar
+
+.PHONY: db-backup
+db-backup:
+	@if (-Not (Test-Path backups)) { New-Item -ItemType Directory -Path backups | Out-Null }
+	$fname = if ('$(FILE)' -ne '') { '$(FILE)' } else { (Get-Date -Format "yyyyMMdd-HHmmss") + "-backup.sql" };
+	docker compose -f Docker-compose.yml exec -T db pg_dump -U vigar -d vigar > backups/$$fname
+	@echo "Backup written to backups/$$fname"
+
+.PHONY: db-restore
+db-restore:
+	@if ('$(FILE)' -eq '') { Write-Error "Specify FILE=..."; exit 1 }
+	docker compose -f Docker-compose.yml exec -T db psql -U vigar -d vigar < backups/$(FILE)
 
 .PHONY: migrate
 migrate:

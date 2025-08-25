@@ -16,12 +16,21 @@ from .models import Project
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import connection
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter # pyright: ignore[reportMissingImports]
 from rest_framework_simplejwt.tokens import RefreshToken
 
 @api_view(["GET"])
 def health(_request):
-    return Response({"status": "ok"})
+    db_ok = False
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            db_ok = cursor.fetchone() == (1,)
+    except Exception:  # noqa: BLE001
+        db_ok = False
+    status_code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
+    return Response({"status": "ok" if db_ok else "degraded", "db": db_ok}, status=status_code)
 
 @extend_schema(summary="Register new user", tags=["Auth"], request=RegisterSerializer)
 @api_view(["POST"])
