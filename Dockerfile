@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt /app/requirements.txt
 
-# Pre-build wheels for all dependencies (uses prebuilt wheels where available, e.g. psycopg2-binary)
-RUN python -m pip install --upgrade pip && \
+# Pre-build wheels for dependencies; leverage BuildKit cache for pip
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python -m pip install --upgrade pip && \
     pip wheel --wheel-dir /wheels -r /app/requirements.txt
 
 FROM python:3.12-slim AS runtime

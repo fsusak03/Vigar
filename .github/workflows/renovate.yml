@@ -16,15 +16,19 @@ jobs:
     name: Run Renovate
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (workflow_run)
+        if: ${{ github.event_name == 'workflow_run' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Checkout (manual)
+        if: ${{ github.event_name != 'workflow_run' }}
         uses: actions/checkout@v4
       - name: Scan for critical vulnerabilities (Trivy)
         if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
-            with:
-              ref: ${{ github.event.workflow_run.head_sha }}
           scanners: vuln
           ignore-unfixed: true
           severity: CRITICAL
