@@ -11,78 +11,52 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vigar
+
 jobs:
-  # ✅ Ovaj job se vrti NA PR-u i služi kao required check (nema push)
+  # ✅ Required check na PR-u (nema push)
   build-check:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - uses: actions/checkout@v4
 
       - name: Extract version (semver)
         id: extract_version
         shell: bash
         run: |
-          VERSION=$(python - <<'PY'
-          import io, re
-          with io.open('Vigar/settings.py', 'r', encoding='utf-8') as f:
-            s = f.read()
-          m = re.search(r'VERSION"\s*:\s*"([^"]+)"', s)
-          print(m.group(1) if m else '0.0.0')
-          PY
-          )
+          VERSION=$(grep -Po 'VERSION"\s*:\s*"\K[^"]+' Vigar/settings.py || echo "0.0.0")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      # Nije potreban login jer ne pushamo
-      - name: Build (no push) — PR check
+      - name: Build (no push) — PR check (amd64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
-          # Brži check: samo amd64 da PR ne visi dugo (možeš staviti i arm64 ako baš treba)
           platforms: linux/amd64
-          # Korištenje cache-a da check bude što brži
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
 
-  # 🚀 Ovaj job ide TEK nakon mergea (push na dev) i radi pravi multi-arch push
+  # 🚀 Nakon mergea u dev — pravi publish (amd64)
   publish:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/dev') }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - uses: actions/checkout@v4
 
       - name: Extract version (semver)
         id: extract_version
         shell: bash
         run: |
-          VERSION=$(python - <<'PY'
-          import io, re
-          with io.open('Vigar/settings.py', 'r', encoding='utf-8') as f:
-            s = f.read()
-          m = re.search(r'VERSION"\s*:\s*"([^"]+)"', s)
-          print(m.group(1) if m else '0.0.0')
-          PY
-          )
+          VERSION=$(grep -Po 'VERSION"\s*:\s*"\K[^"]+' Vigar/settings.py || echo "0.0.0")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -91,14 +65,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image (dev)
+      - name: Build & Push image (dev, amd64)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/vigar:cache
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/vigar:cache,mode=max
+            type=gha,mode=max
+          provenance: false
+          sbom: false
           tags: |
             ghcr.io/${{ github.repository_owner }}/vigar:dev-latest
             ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.sha }}
