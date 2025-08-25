@@ -18,13 +18,13 @@ jobs:
     steps:
       - name: Checkout (workflow_run)
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Checkout (manual)
         if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Scan for critical vulnerabilities (Trivy)
         if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
@@ -47,11 +47,12 @@ jobs:
              github.event.workflow_run.head_branch == 'dev')
             || github.event_name == 'workflow_dispatch'
           }}
-        uses: renovatebot/github-action@v43.0.4
+        uses: renovatebot/github-action@v43.0.9
 
         with:
           token: ${{ secrets.RENOVATE_TOKEN1 }}
+
           configurationFile: renovate-config.js
         env:
           LOG_LEVEL: info
-          RENOVATE_REPOSITORIES: ${{ github.repository }}   # 👈 OVO DODAJ
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
