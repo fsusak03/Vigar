@@ -47,15 +47,9 @@ jobs:
              github.event.workflow_run.head_branch == 'dev')
             || github.event_name == 'workflow_dispatch'
           }}
-<<<<<<< Updated upstream
         uses: renovatebot/github-action@v43.0.9
-
-=======
-        uses: renovatebot/github-action@v43.0.4
->>>>>>> Stashed changes
         with:
           token: ${{ secrets.RENOVATE_TOKEN1 }}
-
           configurationFile: renovate-config.js
           repositories: ${{ github.repository }}
         env:
