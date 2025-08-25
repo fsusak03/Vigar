@@ -8,7 +8,7 @@
   "rangeStrategy": "auto",
   "rebaseWhen": "behind-base-branch",
   "pip_requirements": {
-    "fileMatch": ["(^|/)requirements\\.txt$"]
+    "managerFilePatterns": ["(^|/)requirements\\.txt$"]
   },
   "packageRules": [
     { "matchManagers": ["pip_requirements"], "groupName": "python dependencies" },
