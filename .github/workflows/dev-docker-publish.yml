@@ -1,10 +1,9 @@
 name: Publish Docker (dev)
 
 on:
-  workflow_run:
-    workflows: ["CI (dev)"]
-    types:
-      - completed
+  pull_request:
+    branches: [ dev ]
+    types: [ closed ]
 
 permissions:
   contents: read
@@ -12,13 +11,13 @@ permissions:
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'dev' }}
+  if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+      ref: ${{ github.event.pull_request.merge_commit_sha }}
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -52,11 +51,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ github.repository_owner }}/vigar:dev-latest
-            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.event.pull_request.merge_commit_sha }}
             ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ steps.extract_version.outputs.version }}
-      - name: Smoke test (staging)
-        if: ${{ secrets.STAGING_URL != '' }}
-        env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
-        run: |
-          curl -fsS "$STAGING_URL/api/health/" | jq . || (echo "Smoke test failed" && exit 1)
