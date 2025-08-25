@@ -37,12 +37,8 @@ jobs:
           context: .
           push: false
           platforms: linux/amd64
-          cache-from: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:cache
-            type=gha
-          cache-to: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:cache,mode=max
-            type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           provenance: false
           sbom: false
 
@@ -76,14 +72,14 @@ jobs:
           push: true
           platforms: linux/amd64
           cache-from: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:cache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/vigar:cache
             type=gha
           cache-to: |
-            type=registry,ref=${{ env.IMAGE_NAME }}:cache,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/vigar:cache,mode=max
             type=gha,mode=max
           provenance: false
           sbom: false
           tags: |
-            ${{ env.IMAGE_NAME }}:dev-latest
-            ${{ env.IMAGE_NAME }}:dev-${{ github.sha }}
-            ${{ env.IMAGE_NAME }}:dev-${{ steps.extract_version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/vigar:dev-latest
+            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/vigar:dev-${{ steps.extract_version.outputs.version }}
