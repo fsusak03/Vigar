@@ -1,0 +1,36 @@
+name: Renovate
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  renovate:
+    name: Run Renovate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Scan for critical vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+          format: table
+          hide-progress: true
+      - name: Self-hosted Renovate
+        uses: renovatebot/github-action@v40.2.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          configurationFile: renovate.json
+        env:
+          LOG_LEVEL: info
