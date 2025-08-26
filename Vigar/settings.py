@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------------------
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
-    "django-insecure-$tk8rydd!bj3$bypy24@tc+=!5wh4x1h^!wo!mwod!9309e56i"
+    "django-insecure-$tk8rydd!bj3$bypy24@tc+=!5wh4x1h^!wo!mwod!9309e56i",
 )
 
 # ---------------------------
@@ -35,7 +35,6 @@ INSTALLED_APPS = [
     # treće strane
     "rest_framework",
     "django_filters",
-
     # tvoje aplikacije
     "core",
 ]
@@ -99,7 +98,9 @@ else:
 # Password validation
 # ---------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -155,7 +156,10 @@ LOGGING = {
             "formatter": "json",
         }
     },
-    "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO")},
+    "root": {
+        "handlers": ["console"],
+        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
 }
 
 # ---------------------------
@@ -165,7 +169,12 @@ SENTRY_DSN = os.environ.get("SENTRY_DSN")
 if SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
-    sentry_sdk.init(dsn=SENTRY_DSN, integrations=[DjangoIntegration()], traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.0")))
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+    )
 
 
 # ----------------------------

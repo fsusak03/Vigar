@@ -1,0 +1,46 @@
+repos:
+  # Ruff (lint + optional fix)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9  # zadnja stabilna verzija
+    hooks:
+      - id: ruff
+        args: [--fix]  # automatski ispravlja gdje može
+
+  # Black (formatter)
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  # isort (sortiranje importa)
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: isort (python)
+        language_version: python3
+
+  # Flake8 (style/lint dodatno)
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+
+  # mypy (type checking)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - "django"
+          - "djangorestframework"
+          - "django-filter"
+          - "django-prometheus"
+          - "django-stubs[compatible]"
+          - "drf-spectacular"
+          - "drf-spectacular-sidecar"
+          - "django-cors-headers"
+          - "whitenoise"
+          - "djangorestframework-simplejwt"
+          - "psycopg2-binary"
