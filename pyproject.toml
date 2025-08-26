@@ -35,4 +35,14 @@ django_settings_module = "Vigar.settings"
 module = ["core.models"]
 disable_error_code = ["var-annotated"]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
+[project]
+name = "vigar"
+version = "0.1.0"
+description = "Vigar backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
