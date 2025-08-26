@@ -1,0 +1,8 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+per-file-ignores =
+    */migrations/*.py:E501
+    Vigar/settings.py:E501
+    Vigar/urls.py:E501
+    core/urls.py:E501

@@ -1,5 +1,6 @@
 from rest_framework import permissions
 
+
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
@@ -8,11 +9,9 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and (
-                user.is_superuser
-                or user.groups.filter(name__iexact="admin").exists()
-            )
+            and (user.is_superuser or user.groups.filter(name__iexact="admin").exists())
         )
+
 
 class IsProjectMemberOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -21,4 +20,7 @@ class IsProjectMemberOrReadOnly(permissions.BasePermission):
         project = getattr(obj, "project", obj)
         if hasattr(project, "project"):  # TimeEntry -> task.project
             project = project.project
-        return request.user.is_authenticated and project.members.filter(pk=request.user.pk).exists()
+        return (
+            request.user.is_authenticated
+            and project.members.filter(pk=request.user.pk).exists()
+        )

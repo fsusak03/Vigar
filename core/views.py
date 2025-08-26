@@ -1,24 +1,29 @@
-from rest_framework import viewsets, decorators, response
-from rest_framework.permissions import AllowAny
+from django.db import connection
 from django_filters.rest_framework import DjangoFilterBackend
-from . import selectors as sel, services as svc
+from drf_spectacular.utils import (  # pyright: ignore[reportMissingImports]
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
+from rest_framework import decorators, response, status, viewsets
+from rest_framework.decorators import api_view
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from . import selectors as sel
+from . import services as svc
+from .filters import ProjectFilter, TaskFilter, TimeEntryFilter
+from .models import Project
 from .permissions import IsProjectMemberOrReadOnly
 from .serializers import (
     ClientSerializer,
     ProjectSerializer,
+    RegisterSerializer,
     TaskSerializer,
     TimeEntrySerializer,
-    RegisterSerializer,
 )
-from .filters import ProjectFilter, TaskFilter, TimeEntryFilter
-from .models import Project
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from django.db import connection
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter # pyright: ignore[reportMissingImports]
-from rest_framework_simplejwt.tokens import RefreshToken
 
 @api_view(["GET"])
 def health(_request):
@@ -30,7 +35,10 @@ def health(_request):
     except Exception:  # noqa: BLE001
         db_ok = False
     status_code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
-    return Response({"status": "ok" if db_ok else "degraded", "db": db_ok}, status=status_code)
+    return Response(
+        {"status": "ok" if db_ok else "degraded", "db": db_ok}, status=status_code
+    )
+
 
 @extend_schema(summary="Register new user", tags=["Auth"], request=RegisterSerializer)
 @api_view(["POST"])
@@ -49,7 +57,6 @@ def register(request):
         )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
- 
 
 @extend_schema_view(
     list=extend_schema(summary="List clients", tags=["Clients"]),
@@ -65,6 +72,7 @@ class ClientViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
 
+
 @extend_schema_view(
     list=extend_schema(summary="List projects", tags=["Projects"]),
     retrieve=extend_schema(summary="Get project", tags=["Projects"]),
@@ -79,6 +87,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectFilter
+
 
 @extend_schema_view(
     list=extend_schema(summary="List tasks", tags=["Tasks"]),
@@ -99,12 +108,17 @@ class TaskViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         project: Project = data["project"]
         assignee = data.get("assignee")
-        instance = svc.create_task(project=project, title=data["title"], assignee=assignee,
-                                   description=data.get("description"),
-                                   status=data.get("status","todo"),
-                                   estimate_hours=data.get("estimate_hours",0),
-                                   due_date=data.get("due_date"))
+        instance = svc.create_task(
+            project=project,
+            title=data["title"],
+            assignee=assignee,
+            description=data.get("description"),
+            status=data.get("status", "todo"),
+            estimate_hours=data.get("estimate_hours", 0),
+            due_date=data.get("due_date"),
+        )
         serializer.instance = instance
+
 
 @extend_schema_view(
     list=extend_schema(summary="List time entries", tags=["TimeEntries"]),
@@ -125,8 +139,18 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
         summary="Report: total hours by project",
         tags=["Reports"],
         parameters=[
-            OpenApiParameter(name="date_from", required=False, location=OpenApiParameter.QUERY, description="YYYY-MM-DD"),
-            OpenApiParameter(name="date_to", required=False, location=OpenApiParameter.QUERY, description="YYYY-MM-DD"),
+            OpenApiParameter(
+                name="date_from",
+                required=False,
+                location=OpenApiParameter.QUERY,
+                description="YYYY-MM-DD",
+            ),
+            OpenApiParameter(
+                name="date_to",
+                required=False,
+                location=OpenApiParameter.QUERY,
+                description="YYYY-MM-DD",
+            ),
         ],
         responses={200: None},
     )
