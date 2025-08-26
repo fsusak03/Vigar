@@ -1,8 +1,7 @@
 name: Release Please
-
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -10,10 +9,14 @@ permissions:
   pull-requests: write
 
 jobs:
-  release-please:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         with:
           release-type: python
+          target-branch: main
           package-name: yourpkg
+          versioning-strategy: auto
+          release-as: minor
+          changelog-path: CHANGELOG.md

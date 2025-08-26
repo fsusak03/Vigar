@@ -34,3 +34,5 @@ django_settings_module = "Vigar.settings"
 [[tool.mypy.overrides]]
 module = ["core.models"]
 disable_error_code = ["var-annotated"]
+
+
