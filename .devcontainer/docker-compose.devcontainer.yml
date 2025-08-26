@@ -1,21 +1,21 @@
+version: "3.8"
 services:
   web:
-    working_dir: /core
+    working_dir: /workspace
     command: >-
-      bash -lc "python manage.py migrate --noinput &&
-                python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - ./core:/core:cached
-    # Don't repeat security_opt/cap_drop here if they exist in base compose
+      bash -lc "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
     healthcheck:
-      disable: true
+      test: ["CMD-SHELL", "exit 0"]
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8000:8000"
+    read_only: false
+    volumes:
+      - type: bind
+        source: c:\\Users\\Filip\\Desktop\\Django
+        target: /workspace
 
   db:
-    # only expose if you want to connect from host tools
-    ports:
-      - "5432:5432"
+    # inherit base settings; no override
