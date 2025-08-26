@@ -1,0 +1,21 @@
+services:
+  web:
+    working_dir: /core
+    command: >-
+      bash -lc "python manage.py migrate --noinput &&
+                python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./core:/core:cached
+    # Don't repeat security_opt/cap_drop here if they exist in base compose
+    healthcheck:
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  db:
+    # only expose if you want to connect from host tools
+    ports:
+      - "5432:5432"

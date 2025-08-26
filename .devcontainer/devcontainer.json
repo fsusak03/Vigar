@@ -1,0 +1,42 @@
+{
+  "name": "vigar-dev",
+  "dockerComposeFile": [
+    "../Docker-compose.yml",
+    "docker-compose.devcontainer.yml"
+  ],
+  "service": "web",
+  "workspaceFolder": "/core",
+  "overrideCommand": false,
+  "remoteUser": "root",
+  "forwardPorts": [8000, 5432],
+
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=1024",
+    "VSCODE_NODE_OPTIONS": "--max-old-space-size=1024"
+  },
+
+  "mounts": [
+    "source=devcontainer-pip-cache,target=/root/.cache/pip,type=volume"
+  ],
+
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -r requirements.txt",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.typeCheckingMode": "basic",
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "github.vscode-github-actions"
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+services:
+  web:
+    profiles:
+      - dev
+    environment:
+      DJANGO_DEBUG: "True"
+      DJANGO_SETTINGS_MODULE: Vigar.settings
+      PYTHONUNBUFFERED: "1"
+    command: >
+      sh -c "python manage.py migrate && \
+             echo 'Open: http://localhost:8000/api/docs/' && \
+             echo 'API root: http://localhost:8000/api/' && \
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app:rw
+      - ./staticfiles:/app/staticfiles
+      - ./media:/app/media
+    ports:
+      - "8000:8000"
+    read_only: false
+    tty: true
+    stdin_open: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
