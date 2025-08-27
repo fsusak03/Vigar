@@ -1,3 +1,4 @@
+version: "3.8"
 services:
   web:
     profiles:
@@ -6,6 +7,7 @@ services:
       DJANGO_DEBUG: "True"
       DJANGO_SETTINGS_MODULE: Vigar.settings
       PYTHONUNBUFFERED: "1"
+      REDIS_URL: "redis://redis:6379/1"
     command: >
       sh -c "python manage.py migrate && \
              echo 'Open: http://localhost:8000/api/docs/' && \
@@ -22,4 +24,22 @@ services:
     stdin_open: true
     tmpfs:
       - /tmp
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    profiles:
+      - dev
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped

@@ -1,5 +1,9 @@
+from django.core.cache import cache
 from django.db import connection
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes  # pyright: ignore[reportMissingImports]
 from drf_spectacular.utils import (  # pyright: ignore[reportMissingImports]
     OpenApiParameter,
     extend_schema,
@@ -9,7 +13,9 @@ from rest_framework import decorators, response, status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import selectors as sel
 from . import services as svc
@@ -25,22 +31,42 @@ from .serializers import (
 )
 
 
+@extend_schema(
+    summary="Health check",
+    tags=["Health"],
+    responses={200: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+)
 @api_view(["GET"])
 def health(_request):
     db_ok = False
+    redis_ok = False
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             db_ok = cursor.fetchone() == (1,)
     except Exception:  # noqa: BLE001
         db_ok = False
-    status_code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
+    try:
+        cache.set("healthcheck", "ok", 5)
+        redis_ok = cache.get("healthcheck") == "ok"
+    except Exception:  # noqa: BLE001
+        redis_ok = False
+    overall_ok = db_ok and redis_ok
+    status_code = (
+        status.HTTP_200_OK if overall_ok else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
     return Response(
-        {"status": "ok" if db_ok else "degraded", "db": db_ok}, status=status_code
+        {"status": "ok" if overall_ok else "degraded", "db": db_ok, "redis": redis_ok},
+        status=status_code,
     )
 
 
-@extend_schema(summary="Register new user", tags=["Auth"], request=RegisterSerializer)
+@extend_schema(
+    summary="Register new user",
+    tags=["Auth"],
+    request=RegisterSerializer,
+    responses={201: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+)
 @api_view(["POST"])
 def register(request):
     serializer = RegisterSerializer(data=request.data)
@@ -72,6 +98,15 @@ class ClientViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
 
+    # Cache list and retrieve for 60s
+    @method_decorator(cache_page(60))
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().list(request, *args, **kwargs)
+
+    @method_decorator(cache_page(60))
+    def retrieve(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().retrieve(request, *args, **kwargs)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List projects", tags=["Projects"]),
@@ -87,6 +122,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectFilter
+
+    @method_decorator(cache_page(60))
+    def list(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().list(request, *args, **kwargs)
+
+    @method_decorator(cache_page(60))
+    def retrieve(self, request, *args, **kwargs):  # type: ignore[override]
+        return super().retrieve(request, *args, **kwargs)
 
 
 @extend_schema_view(
@@ -159,3 +202,17 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
         df = request.query_params.get("date_from")
         dt = request.query_params.get("date_to")
         return response.Response(list(sel.total_hours_by_project(df, dt)))
+
+    @method_decorator(cache_page(60))
+    @decorators.action(
+        detail=False, methods=["get"], url_path="report/by-project-cached"
+    )
+    def report_by_project_cached(self, request):
+        df = request.query_params.get("date_from")
+        dt = request.query_params.get("date_to")
+        return response.Response(list(sel.total_hours_by_project(df, dt)))
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"

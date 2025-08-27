@@ -4,7 +4,7 @@ SHELL := powershell.exe
 .DEFAULT_GOAL := help
 
 help: 
-	@echo "Targets: dev, prod, stop, logs, logs-web, logs-db, ps, rebuild, downv"
+	@echo "Targets: dev, prod, stop, logs, logs-web, logs-db, logs-redis, ps, rebuild, downv"
 	@echo "  migrate     - Run Django migrations"
 	@echo "  makemigrations - Create migrations"
 	@echo "  test        - Run Django tests in container"
@@ -47,6 +47,10 @@ logs-web:
 .PHONY: logs-db
 logs-db:
 	docker compose -f Docker-compose.yml logs -f db
+
+.PHONY: logs-redis
+logs-redis:
+	docker compose -f Docker-compose.yml logs -f redis
 
 .PHONY: ps
 ps:
