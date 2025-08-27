@@ -53,6 +53,9 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
+# If you later add site-wide caching, enable UpdateCacheMiddleware and FetchFromCacheMiddleware
+# in the correct order and set CACHE_MIDDLEWARE_SECONDS. Leaving disabled by default.
+
 ROOT_URLCONF = "Vigar.urls"
 
 TEMPLATES = [
@@ -122,6 +125,27 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------
+# Cache (Redis)
+# ---------------------------
+# Example URLs:
+#   redis://redis:6379/1   (Docker service)
+#   redis://localhost:6379/1 (local)
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/1")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # parse DB index from URL; if Sentinel or TLS is needed, adjust OPTIONS accordingly
+        },
+        "KEY_PREFIX": os.environ.get("CACHE_KEY_PREFIX", "vigar"),
+        "TIMEOUT": int(os.environ.get("CACHE_TIMEOUT", "300")),
+    }
+}
 # ---------------------------
 # Security headers (prod)
 # ---------------------------
@@ -184,6 +208,17 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        # Tighten login attempts; uses cache backend (Redis) by default
+        "anon": os.environ.get("THROTTLE_RATE_ANON", "60/min"),
+        "user": os.environ.get("THROTTLE_RATE_USER", "120/min"),
+        # Scoped throttle for login endpoint (see ThrottledTokenObtainPairView)
+        "login": os.environ.get("THROTTLE_RATE_LOGIN", "5/min"),
+    },
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
