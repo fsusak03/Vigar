@@ -7,14 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Build deps only in builder stage (won't be present in final image)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
 
-# Pre-build wheels for dependencies; leverage BuildKit cache for pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --upgrade pip && \
     pip wheel --wheel-dir /wheels -r /app/requirements.txt
@@ -28,17 +26,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install from prebuilt wheels; no compiler or APT in runtime
 COPY requirements.txt /app/requirements.txt
 COPY --from=builder /wheels /wheels
 RUN python -m pip install --upgrade pip && \
     pip install --no-index --find-links=/wheels -r /app/requirements.txt && \
     rm -rf /wheels
 
-# Copy application code
 COPY . /app
 
-# Non-root user
 RUN useradd -m -u 10001 appuser && \
     chown -R appuser:appuser /app
 USER 10001

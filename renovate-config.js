@@ -13,10 +13,8 @@ module.exports = {
     'dockerfile',
     'docker-compose',
     'github-actions',
-    // keep npm enabled for future JS tooling; harmless if no package.json
     'npm'
   ],
-  // Configure Python requirements.txt detection
   pip_requirements: {
     managerFilePatterns: ['(^|/)requirements\\.txt$']
   },

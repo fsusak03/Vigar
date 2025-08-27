@@ -19,6 +19,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import selectors as sel
 from . import services as svc
+from .check_serializers import (
+    ProjectHoursReportSerializer,
+    TaskStatusCountSerializer,
+    UserHoursReportSerializer,
+)
 from .filters import ProjectFilter, TaskFilter, TimeEntryFilter
 from .models import Project
 from .permissions import IsProjectMemberOrReadOnly
@@ -92,6 +97,16 @@ def register(request):
     partial_update=extend_schema(summary="Patch client", tags=["Clients"]),
     destroy=extend_schema(summary="Delete client", tags=["Clients"]),
 )
+# /**
+#  * ClientViewSet
+#  * CRUD for clients.
+#  *
+#  * Endpoints: list, retrieve, create, update, partial_update, destroy
+#  * Filters: DjangoFilterBackend
+#  * Permissions: AllowAny
+#  * Caching: list/retrieve cached for 60s
+#  * Tags: Clients
+#  */
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = sel.clients_qs()
     serializer_class = ClientSerializer
@@ -116,6 +131,17 @@ class ClientViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Patch project", tags=["Projects"]),
     destroy=extend_schema(summary="Delete project", tags=["Projects"]),
 )
+# /**
+#  * ProjectViewSet
+#  * CRUD for projects with reporting actions.
+#  *
+#  * Endpoints: list, retrieve, create, update, partial_update, destroy
+#  * Filters: ProjectFilter via DjangoFilterBackend
+#  * Permissions: AllowAny
+#  * Caching: list/retrieve cached for 60s
+#  * Extra actions: GET report/task-counts (TaskStatusCountSerializer[])
+#  * Tags: Projects, Reports
+#  */
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = sel.projects_qs()
     serializer_class = ProjectSerializer
@@ -131,6 +157,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):  # type: ignore[override]
         return super().retrieve(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Report: task counts by status for this project",
+        tags=["Reports"],
+        responses={200: TaskStatusCountSerializer(many=True)},
+    )
+    @decorators.action(detail=True, methods=["get"], url_path="report/task-counts")
+    def report_task_counts(self, request, pk=None):
+        return response.Response(list(sel.task_counts_by_status(project_id=pk)))
+
 
 @extend_schema_view(
     list=extend_schema(summary="List tasks", tags=["Tasks"]),
@@ -140,6 +175,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Patch task", tags=["Tasks"]),
     destroy=extend_schema(summary="Delete task", tags=["Tasks"]),
 )
+# /**
+#  * TaskViewSet
+#  * CRUD for tasks.
+#  *
+#  * Endpoints: list, retrieve, create, update, partial_update, destroy
+#  * Filters: TaskFilter via DjangoFilterBackend
+#  * Permissions: IsProjectMemberOrReadOnly (members write; others read-only)
+#  * Tags: Tasks
+#  */
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = sel.tasks_qs()
     serializer_class = TaskSerializer
@@ -171,6 +215,18 @@ class TaskViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Patch time entry", tags=["TimeEntries"]),
     destroy=extend_schema(summary="Delete time entry", tags=["TimeEntries"]),
 )
+# /**
+#  * TimeEntryViewSet
+#  * CRUD for time entries with reporting endpoints.
+#  *
+#  * Endpoints: list, retrieve, create, update, partial_update, destroy
+#  * Filters: TimeEntryFilter via DjangoFilterBackend
+#  * Permissions: IsProjectMemberOrReadOnly (members write; others read-only)
+#  * Extra actions:
+#  *   - GET report/by-project (+ cached variant) -> ProjectHoursReportSerializer[]
+#  *   - GET report/by-user -> UserHoursReportSerializer[]
+#  * Tags: TimeEntries, Reports
+#  */
 class TimeEntryViewSet(viewsets.ModelViewSet):
     queryset = sel.time_entries_qs()
     serializer_class = TimeEntrySerializer
@@ -195,13 +251,23 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
                 description="YYYY-MM-DD",
             ),
         ],
-        responses={200: None},
+        responses={200: ProjectHoursReportSerializer(many=True)},
     )
     @decorators.action(detail=False, methods=["get"], url_path="report/by-project")
     def report_by_project(self, request):
         df = request.query_params.get("date_from")
         dt = request.query_params.get("date_to")
-        return response.Response(list(sel.total_hours_by_project(df, dt)))
+        rows = sel.total_hours_by_project(df, dt)
+        payload = [
+            {
+                "project_id": r["task__project"],
+                "project_name": r["task__project__name"],
+                "client_name": r["task__project__client__name"],
+                "total_hours": r["total_hours"],
+            }
+            for r in rows
+        ]
+        return response.Response(payload)
 
     @method_decorator(cache_page(60))
     @decorators.action(
@@ -210,9 +276,62 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
     def report_by_project_cached(self, request):
         df = request.query_params.get("date_from")
         dt = request.query_params.get("date_to")
-        return response.Response(list(sel.total_hours_by_project(df, dt)))
+        rows = sel.total_hours_by_project(df, dt)
+        payload = [
+            {
+                "project_id": r["task__project"],
+                "project_name": r["task__project__name"],
+                "client_name": r["task__project__client__name"],
+                "total_hours": r["total_hours"],
+            }
+            for r in rows
+        ]
+        return response.Response(payload)
+
+    @extend_schema(
+        summary="Report: total hours by user",
+        tags=["Reports"],
+        parameters=[
+            OpenApiParameter(
+                name="date_from",
+                required=False,
+                location=OpenApiParameter.QUERY,
+                description="YYYY-MM-DD",
+            ),
+            OpenApiParameter(
+                name="date_to",
+                required=False,
+                location=OpenApiParameter.QUERY,
+                description="YYYY-MM-DD",
+            ),
+        ],
+        responses={200: UserHoursReportSerializer(many=True)},
+    )
+    @decorators.action(detail=False, methods=["get"], url_path="report/by-user")
+    def report_by_user(self, request):
+        df = request.query_params.get("date_from")
+        dt = request.query_params.get("date_to")
+        rows = sel.total_hours_by_user(df, dt)
+        payload = [
+            {
+                "user_id": r["user"],
+                "username": r["user__username"],
+                "total_hours": r["total_hours"],
+            }
+            for r in rows
+        ]
+        return response.Response(payload)
 
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
+    # /**
+    #  * ThrottledTokenObtainPairView
+    #  * JWT obtain pair view with scoped rate limiting.
+    #  *
+    #  * Throttle class: ScopedRateThrottle
+    #  * Throttle scope: "login" (rate set in
+    #  *   settings.REST_FRAMEWORK.DEFAULT_THROTTLE_RATES)
+    #  * Tags: Auth
+    #  */
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
