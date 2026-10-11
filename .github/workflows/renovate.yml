@@ -36,7 +36,7 @@ jobs:
           format: table
           hide-progress: true
       - name: Self-hosted Renovate
-        uses: renovatebot/github-action@v40.2.7
+        uses: renovatebot/github-action@v40.3.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           configurationFile: renovate.json
